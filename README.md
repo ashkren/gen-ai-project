@@ -5,50 +5,50 @@
 ## 1. Problem Statement
 
 ### Background
+
 The Vanderbilt Unity Poll is a quarterly survey tracking American public opinion on major policy issues—healthcare, immigration, presidential approval, economic policy, and more. Each wave surveys ~2,000 nationally representative respondents, providing valuable insights for researchers, policymakers, and journalists.
-However, like most survey projects, the data is fragmented and difficult to access.
 
-### Data is scattered across multiple formats:
+### The Challenge
 
-- PDF questionnaires (question text and metadata)
-- Summary PDFs with dense tables of percentages
-- Raw data files (.sav, .csv) requiring statistical software
-- Crosstab reports with demographic breakdowns
+**Goal**: Create a natural language chatbot that answers questions about survey data.
 
-### Traditional access requires expertise:
+**Problem**: Survey data exists in heterogeneous structures, each requiring different retrieval strategies:
 
-- Analysts manually search through lengthy PDFs
-- Extracting numbers from summary tables is tedious
-- Querying raw data requires SPSS, Stata, or SQL knowledge
-- No simple way to ask "What percentage of people support X?"
-  
+1. **Questionnaire data**: Question text, variable names, metadata (parsed from PDFs)
+2. **Topline statistics**: Overall response percentages for entire sample (calculated from raw data)
+3. **Crosstabs**: Response percentages broken down by demographics—gender, age, education, income, etc. (calculated from raw data)
+
+All three are stored in vector stores for semantic search, but their **structural differences** make simple RAG insufficient:
+
+- **Questionnaires** contain metadata only (no response data)
+- **Toplines** contain aggregate statistics (e.g., "45% approved")
+- **Crosstabs** contain demographic breakdowns (e.g., "Male: 48% approved, Female: 42% approved")
+
+**Simple RAG fails** because it can't:
+- Determine which data source(s) to query from natural language alone
+- Generate multi-step execution plans when query requires multiple sources
+- Handle dependencies between retrieval stages
+
+**Example complexity**:
+```
+User: "What percentage of college-educated voters supported Biden in June 2025?"
+
+Requires:
+1. Find Biden approval questions → questionnaire retrieval
+2. Get June 2025 response percentages → topline retrieval  
+3. Break down by education level → crosstab retrieval
+4. Synthesize across 3 different vector stores
+```
 
 ### Our Solution
-An intelligent multi-agent system using transformer-based LLMs to:
-1. Understand natural language queries about survey data
-2. Automatically route queries to appropriate data sources
-3. Generate execution plans for multi-step retrieval
-4. Synthesize information from multiple sources
 
-**Key Innovation**: Instead of hardcoded routing logic, we leverage transformer self-attention and structured generation to learn routing patterns from examples.
+Use **transformer-based structured generation** to automatically create a "research brief" that:
+1. **Classifies query intent**: Direct answer? Needs data retrieval? Ambiguous?
+2. **Routes to appropriate sources**: Questionnaire, toplines, and/or crosstabs
+3. **Generates multi-stage plans**: Stage 1 (get questions) → Stage 2 (get data) with dependencies
+4. **Extracts filters**: Time period, demographics, topics from natural language
 
-### Example Flow
-```
-User: "What percentage of people approved of Biden in June 2025?"
-
-Transformer generates:
-{
-  "action": "execute_stages",
-  "reasoning": "Need time-specific data. First find Biden questions, then get June 2025 frequencies.",
-  "stages": [
-    {"stage": 1, "source": "questionnaire", "query": "Biden approval"},
-    {"stage": 2, "source": "toplines", "filters": {"month": "June", "year": 2025}}
-  ]
-}
-
-System executes → "45% approved in June 2025 (N=1,847)"
-```
-
+**Key Innovation**: Instead of hardcoded routing rules, we leverage transformer **self-attention** and **constrained decoding** to learn routing patterns from prompt examples—enabling the system to handle novel query types and orchestrate complex multi-step retrieval across heterogeneous data sources.
 ---
 
 ## 2. Methodology: Transformer Connections
