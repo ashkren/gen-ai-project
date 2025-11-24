@@ -1,57 +1,62 @@
 # Survey Analytics: Multi-Agent RAG System
-Ash Ren, Adithya Kalidindi
 
----
+**Authors:** Ash Ren, Adithya Kalidindi
 
-## 1. Problem Statement
+-----
+
+## 1\. Problem Statement
 
 ### Background
-The **Vanderbilt Unity Poll** is a quarterly survey tracking American public opinion on major policy issues—healthcare, immigration, presidential approval, economic policy, and more. Each wave surveys **~2,000 nationally representative respondents**. 
 
-Survey results are typically stored in lengthy PDF reports, academic articles, and static data tables. Researchers and analysts must manually search through numerous reports to find specific statistics, demographic breakdowns, or track trends over time -- a process that can take hours for a single analysis. Our project seeks to make survey data more accessible using generative AI capabilities to provide specific survey results in real time. 
+The **Vanderbilt Unity Poll** is a quarterly survey tracking American public opinion on major policy issues—healthcare, immigration, presidential approval, economic policy, and more. Each wave surveys **\~2,000 nationally representative respondents**.
+
+Survey results are typically stored in lengthy PDF reports, academic articles, and static data tables. Researchers and analysts must manually search through numerous reports to find specific statistics, demographic breakdowns, or track trends over time—a process that can take hours for a single analysis. Our project seeks to make survey data more accessible using generative AI capabilities to provide specific survey results in real-time.
 
 ### The Challenge
-**Goal**: Create a natural language chatbot that answers questions about survey data.
 
-**Problem**: Survey data exists in **heterogeneous structures**:
-1. **Questionnaire data**: Question text, variable names, metadata
-2. **Topline statistics**: Overall response percentages for each question (e.g., "In the 2024 election, 50% of respondents voted for..., 20% voted for... etc.")
-3. **Crosstabs**: Sociodemographic breakdowns for each answer option of a survey question (e.g., "Out of all respondents who voted for ..., 70% are democrats, 15% are republicans, etc. ")
+**Goal:** Create a natural language chatbot that answers questions about survey data.
 
-**Simple RAG fails** because it can't:
-- Determine which data source(s) to query from natural language
-- Generate multi-step execution plans when queries require multiple sources
-- Handle dependencies between retrieval stages
+**Problem:** Survey data exists in **heterogeneous structures**:
 
-**Example complexity**:
-```
-User: "What percentage of college-educated voters supported Biden in June 2025?"
-Requires: Find question → Get percentages → Break down by education
-         (Questionnaire)   (Toplines)          (Crosstabs)
-```
+1.  **Questionnaire data:** Question text, variable names, metadata.
+2.  **Topline statistics:** Overall response percentages for each question (e.g., "In the 2024 election, 50% of respondents voted for..., 20% voted for...").
+3.  **Crosstabs:** Sociodemographic breakdowns for each answer option of a survey question (e.g., "Out of all respondents who voted for X, 70% are Democrats, 15% are Republicans").
+
+> **Why Simple RAG Fails:**
+>
+>   * It cannot determine which data source(s) to query from natural language.
+>   * It cannot generate multi-step execution plans when queries require multiple sources.
+>   * It cannot handle dependencies between retrieval stages.
+
+**Example Complexity:**
+*User:* "What percentage of college-educated voters supported Biden in June 2025?"
+
+  * **Step 1:** Find question (Questionnaire)
+  * **Step 2:** Get percentages (Toplines)
+  * **Step 3:** Break down by education (Crosstabs)
 
 ### Our Solution
+
 Use **transformer-based structured generation** to automatically create a "research brief" that routes queries to appropriate sources and generates multi-stage plans when needed.
 
----
+-----
 
-## 2. Data Preprocessing: Creating Static Datasets for RAG Agents
+## 2\. Data Preprocessing: Creating Static Datasets for RAG Agents
 
 ### Challenge: Raw Data → Vector Stores
 
-**Input Materials:**
-- Poll questionnaires (PDF/DOCX files)
-- Raw survey responses (SPSS .sav files converted to CSV)
-
----
+**Input Materials:** Poll questionnaires (PDF/DOCX) and Raw survey responses (SPSS .sav converted to CSV).
 
 ### Step 1: Parse Questionnaires
-**Tool:** `questionnaire_parser.py`
-- **Input:** Questionnaire PDF/DOCX
-- **Process:** GPT-4o extracts structured metadata via prompt engineering
-- **Output:** Static JSON file with question metadata
 
-**Example Output:**
+  * **Tool:** `questionnaire_parser.py`
+  * **Input:** Questionnaire PDF/DOCX
+  * **Process:** GPT-4o extracts structured metadata via prompt engineering.
+  * **Output:** Static JSON file with question metadata.
+  * **Vectorstore:** `create_questionnaire_vectorstores.py` generates embeddings and uploads to Pinecone.
+
+<!-- end list -->
+
 ```json
 {
   "question_id": "Vanderbilt_Unity_Poll_2025_June_VAND6A",
@@ -64,353 +69,379 @@ Use **transformer-based structured generation** to automatically create a "resea
 }
 ```
 
-**Vectorstore Creation:** `create_questionnaire_vectorstores.py` generates embeddings and uploads to Pinecone index
-
----
-
 ### Step 2: Generate Toplines Statistics
-**Tool:** `toplines_generator.py`
-- **Input:** Raw survey CSV + Questionnaire JSON
-- **Process:** Calculate weighted percentages for overall sample
-- **Output:** Static CSV files with response frequencies
 
-**Example Output:**
+  * **Tool:** `toplines_generator.py`
+  * **Input:** Raw survey CSV + Questionnaire JSON
+  * **Process:** Calculate weighted percentages for the overall sample.
+  * **Output:** Static CSV files with response frequencies.
+  * **Vectorstore:** `create_toplines_vectorstores.py` generates embeddings and uploads to Pinecone.
+
+<!-- end list -->
+
 ```csv
 variable,response_label,percent,weighted_n,unweighted_n
 VAND6A,Strongly support,35,420,418
 VAND6A,Somewhat support,23,276,280
 ```
 
-**Vectorstore Creation:** `create_toplines_vectorstores.py` generates embeddings and uploads to Pinecone index
-
----
-
 ### Step 3: Generate Crosstabs
-**Tool:** `crosstab_generator.py`
-- **Input:** Raw survey CSV + Questionnaire JSON
-- **Process:** Calculate weighted percentages by demographics
-- **Output:** Static CSV files with demographic breakdowns
 
-**Example Output:**
+  * **Tool:** `crosstab_generator.py`
+  * **Input:** Raw survey CSV + Questionnaire JSON
+  * **Process:** Calculate weighted percentages by demographics.
+  * **Output:** Static CSV files with demographic breakdowns.
+  * **Vectorstore:** `create_crosstab_vectorstore.py` generates embeddings and uploads to Pinecone.
+
+<!-- end list -->
+
 ```csv
 Answer,PGENDER: Male,PGENDER: Female,PPARTY: Democrat,PPARTY: Republican
 Strongly support,32% (156),38% (264),54% (301),12% (45)
 Somewhat support,25% (122),21% (154),28% (156),18% (67)
 ```
 
-**Vectorstore Creation:** `create_crosstab_vectorstore.py` generates embeddings and uploads to Pinecone index
+-----
 
----
+## 3\. Architecture Overview
 
-## 3. Architecture Overview
+### Multi-Agent System with LangGraph Orchestration
 
-### Multi-Agent System with Intelligent Routing
-
+```text
+User Query
+     ↓
+[Has conversation history?]
+     ↓ Yes                     ↓ No
+ConversationRelevanceChecker  Skip
+     ↓                         ↓
+     └─────────────────────────┘
+              ↓
+     Research Brief Generator (LLM)
+              ↓
+     [Routing Decision]
+              ↓
+     ┌────────┴────────┐
+     ↓                 ↓
+execute_stages    route_to_sources
+(multi-stage)     (single-stage)
+     ↓                 ↓
+     └────────┬────────┘
+              ↓
+     Stage Execution Loop
+     ┌─────────────────┐
+     │ QuestionnaireRAG│
+     │ ToplinesRAG     │
+     │ CrosstabsRAG    │──→ CrosstabSummarizer
+     └─────────────────┘
+              ↓
+     Context Extraction
+              ↓
+     [More stages?] ──Yes──→ Loop back
+              ↓ No
+     Response Synthesizer (LLM)
+              ↓
+     [Visualization enabled?]
+              ↓ Yes
+     VisualizationAgent
+     ├─ Intent Analysis (LLM)
+     ├─ Data Extraction
+     └─ Chart Generation
+              ↓
+     Final Response + Chart
 ```
-User Query → Research Brief Agent
-                ↓
-         [Has conversation history?]
-                ↓ Yes                ↓ No
-         RelevanceChecker      Skip check
-                ↓                    ↓
-         Research Brief Generation
-                ↓
-         [Route Decision] → RAG Agents → Synthesis → Visualization
+
+### Core Components (9 Total)
+
+1.  **ConversationRelevanceChecker (`relevance_checker.py`):**
+
+      * LLM analyzes relationship between current query and history.
+      * Classifies: `same_topic_different_demo`, `same_topic_different_time`, `trend_analysis`, `new_topic`.
+      * Determines reusable data flags → **reduces API calls by 50-66%**.
+
+2.  **Research Brief Generator (GPT-4o within `survey_agent.py`):**
+
+      * Decides routing strategy based on query + relevance analysis.
+      * Generates multi-stage plans when needed and extracts filters.
+      * Uses structured output (Pydantic `ResearchBrief` model).
+
+3.  **QuestionnaireRAG (`questionnaire_rag.py`):**
+
+      * Retrieves question metadata from Pinecone via Semantic search + metadata filtering.
+      * Outputs: `question_info` (variable names, poll dates, topics).
+
+4.  **ToplinesRAG (`toplines_rag.py`):**
+
+      * Retrieves aggregate response statistics using `question_info` for precise filtering.
+      * Outputs: Response percentages with sample sizes.
+
+5.  **CrosstabsRAG (`crosstab_rag.py`):**
+
+      * Retrieves demographic breakdowns using `question_info` + demographic filters.
+      * Outputs: Multi-dimensional crosstab data.
+
+6.  **CrosstabSummarizer (LLM-based within `crosstab_rag.py`):**
+
+      * **Problem:** Crosstabs return 50+ chunks per question.
+      * **Solution:** GPT-4o condenses chunks → **70-80% reduction**.
+      * Combines multi-part documents and extracts only relevant demographics.
+
+7.  **Context Extractor (within `survey_agent.py`):**
+
+      * Extracts `question_info` metadata from stage results.
+      * Priority: Recent results \> conversation history. Stores in LangGraph checkpoint.
+
+8.  **Response Synthesizer (GPT-4o within `survey_agent.py`):**
+
+      * Combines retrieved data into a coherent narrative with citations.
+      * Token optimization via CrosstabSummarizer integration.
+
+9.  **VisualizationAgent (`viz_agent.py` - Optional):**
+
+      * **Intent Analysis:** LLM determines if chart is appropriate and returns `VizIntent`.
+      * **Data Extraction:** Rule-based parsing from stage results (`_extract_from_toplines`, `_extract_from_crosstabs`).
+      * **Chart Generation:** Matplotlib rendering (Bar, Grouped Bar, Line, Pie) with auto-layout.
+
+### LangGraph State Management
+
+**State Model:**
+
+```python
+class SurveyAnalysisState(TypedDict):
+    messages: Annotated[List[BaseMessage], add_messages]
+    user_question: str
+    research_brief: Optional[ResearchBrief]
+    current_stage: int
+    stage_results: List[StageResult]  # Preserved across turns!
+    final_answer: Optional[str]
+    enable_viz_for_query: bool
+    visualization_metadata: Optional[Dict]
 ```
-
-**Core Components:**
-
-**1. Research Brief Agent (GPT-4o)**
-- Decides routing strategy based on query + relevance analysis
-- Generates multi-stage plans when needed
-- Extracts filters (time, demographics, topics)
-
-**2. Three Specialized RAG Agents** (all use Pinecone + OpenAI embeddings):
-- **QuestionnaireRAG**: Retrieves question metadata
-- **ToplinesRAG**: Retrieves aggregate response statistics  
-- **CrosstabsRAG**: Retrieves demographic breakdowns with LLM summarization
-
-**3. Visualization Agent**
-- Automatically detects when charts would help
-- Generates bar charts, grouped bars, line charts using matplotlib
-
-**4. RelevanceChecker**
-- Analyzes relationship between current query and conversation history
-- Classifies as: `same_topic_different_demo`, `same_topic_different_time`, `trend_analysis`, `new_topic`
-- Determines what previous data can be reused → reduces API calls by 50-66%
 
 ### Routing Logic
 
 | Query Type | Relevance Check | Routing Decision | Example |
-|------------|-----------------|------------------|---------|
-| New question search | `new_topic` | Single-stage → Questionnaire | "What was asked about immigration?" |
-| Follow-up (same topic) | `same_topic_different_demo` | Single-stage → Skip questionnaire | "Now show by gender" |
-| Follow-up (time change) | `same_topic_different_time` | Multi-stage → Re-query all | "Now show June 2024" |
-| Ambiguous statistics | `new_topic` | Multi-stage → Find Q → Get data | "Support for healthcare reform?" |
+| :--- | :--- | :--- | :--- |
+| **New question search** | `new_topic` | Single-stage → Questionnaire | "What was asked about immigration?" |
+| **Follow-up (same topic)** | `same_topic_different_demo` | Single-stage → Skip questionnaire | "Now show by gender" |
+| **Follow-up (time change)** | `same_topic_different_time` | Multi-stage → Re-query all | "Now show June 2024" |
+| **Ambiguous statistics** | `new_topic` | Multi-stage → Find Q → Get data | "Support for healthcare reform?" |
 
----
+-----
 
-## 4. How Transformers Enable the System
+## 4\. How Transformers Enable the System
 
 ### Three Transformer Models Working Together
 
 | Component | Model | Type | Role |
-|-----------|-------|------|------|
-| Embeddings | text-embedding-3-small | Encoder-only | Semantic search in vector stores |
-| Routing & Analysis | GPT-4 Omni (gpt-4o) | Decoder-only | Query classification, planning, summarization |
-| Synthesis | GPT-4 Omni (gpt-4o) | Decoder-only | Answer generation from retrieved data |
+| :--- | :--- | :--- | :--- |
+| **Embeddings** | `text-embedding-3-small` | Encoder-only | Semantic search in vector stores |
+| **Planning & Analysis** | `gpt-4o` | Decoder-only | Query classification, routing, relevance checking |
+| **Synthesis & Viz** | `gpt-4o` | Decoder-only | Data summarization, answer generation, viz intent |
 
 ### Key Transformer Concepts Applied
 
-**1. Semantic Embeddings (Encoder)**
-- OpenAI `text-embedding-3-small` converts text → 1536-dim vectors
-- Used by all three RAG agents for semantic similarity
-- Enables finding semantically related content across different data types
-- Example: "gun control" query matches "firearms policy" questions
+1.  **Semantic Embeddings (Encoder):** Enables finding semantically related content (e.g., "gun control" matches "firearms policy").
+2.  **Structured Output Generation (Decoder):** GPT-4o generates Pydantic models directly (ResearchBrief, RelevanceResult, VizIntent) ensuring reliable coordination.
+3.  **In-Context Learning:** System prompts define multi-stage planning and behavior without fine-tuning.
+4.  **Retrieval-Augmented Generation (RAG):** Retrieves relevant data to inject into context, preventing hallucination.
+5.  **Topic Normalization System:** Maps variations to 12 canonical topics (e.g., "tariffs" → "economy") to prevent semantic drift.
 
-**2. Structured Output Generation (Decoder)**
-- GPT-4o generates Pydantic models directly
-- Research Brief with routing decisions
-- Relevance analysis with reusability flags
-- CrosstabSummarizer condenses 50+ chunks → concise tables
+-----
 
-**3. In-Context Learning**
-- No training required - system prompt defines behavior
-- Multi-stage planning emerges from examples
-- Conversation history maintenance
-
-**4. Retrieval-Augmented Generation (RAG)**
-- Problem: GPT-4o doesn't know Vanderbilt Unity Poll data
-- Solution: Retrieve relevant data, inject into context
-- Result: Factually grounded answers with citations
-
----
-
-## 5. Implementation Demo
+## 5\. Implementation Demo
 
 ### Example 1: Single-Stage Questionnaire Search
-**Query:** "What questions were asked about immigration in 2025?"
 
-**Flow:**
-1. RelevanceChecker → No previous context (`new_topic`)
-2. Research Brief → Single-stage questionnaire query
-3. QuestionnaireRAG → Semantic search + metadata filter (year=2025, topic="immigration")
-4. Returns 5 questions with full metadata
+**Query:** *"What questions were asked about immigration in 2025?"*
 
-**Result:** List of questions with variable names, response options, poll dates
+1.  **Relevance:** `new_topic`
+2.  **Plan:** Single-stage questionnaire query.
+3.  **Retrieval:** Semantic search + metadata filter (year=2025, topic="immigration").
+4.  **Result:** List of questions with variable names and poll dates.
 
----
+### Example 2: Multi-Stage Statistics Lookup with Visualization
 
-### Example 2: Multi-Stage Statistics Lookup
-**Query:** "What % supported Medicare for All in June 2025?"
+**Query:** *"What % supported Medicare for All in June 2025?"*
 
-**Why Multi-Stage?** "Medicare for All" is ambiguous - need to find specific question first
+1.  **Relevance:** `new_topic`
+2.  **Plan:** Multi-stage (Stage 1: Find Question → Stage 2: Get Toplines using `question_info`).
+3.  **Retrieval:** ToplinesRAG returns "58% Support".
+4.  **Visualization:**
+      * *Intent:* Single-variable statistics → `bar_chart`.
+      * *Generation:* Matplotlib figure with styled bars.
+5.  **Result:** Accurate statistics + Bar Chart.
 
-**Flow:**
-1. RelevanceChecker → No previous context (`new_topic`)
-2. Research Brief → Multi-stage plan:
-   - **Stage 1 (Questionnaire):** Find question → Returns `question_info`: {variable: "HEALTH_MFA", year: 2025, month: "June"}
-   - **Stage 2 (Toplines):** Use `question_info` for precise filtering
-3. Pinecone returns: 58% Support, 32% Oppose, 10% Unsure (n=1,234)
+### Example 3: Conversation Optimization (Cost Savings)
 
-**Result:** Accurate statistics with sample size
+**Turn 1:** *"How do views on immigration vary by political party?"*
 
----
+  * **Execution:** QuestionnaireRAG (finds 9 questions) + CrosstabsRAG. **(2 API Calls)**
 
-### Example 3: Conversation Optimization
-**Initial Query:** "How do views on immigration vary by political party in June 2025?"  
-**System:** Multi-stage: finds 9 immigration questions → retrieves crosstabs by party
+**Turn 2:** *"Now show me by gender instead."*
 
-**Follow-Up:** "Now show me by gender instead"
+1.  **Relevance Check:** `same_topic_different_demo`.
+2.  **Optimization:** Reusable data flag set to `questions=true`.
+3.  **Plan:** `route_to_sources` (Skips QuestionnaireRAG).
+4.  **Execution:** Extracts `question_info` from previous state → Queries CrosstabsRAG only. **(1 API Call)**
 
-**Flow:**
-1. **RelevanceChecker** analyzes:
-   - Previous: 9 immigration questions from June 2025
-   - Current: Same topic, same time, different demographic
-   - Classification: `same_topic_different_demo`
-   - **Reusable:** `questions=true` (9 questions available)
+<!-- end list -->
 
-2. **Research Brief** sees reusability flag:
-   - Decision: `route_to_sources` (single-stage)
-   - Skips QuestionnaireRAG entirely
-   - Extracts `question_info` from previous `stage_results`
-
-3. **CrosstabsRAG:**
-   - Uses provided `question_info` (9 questions)
-   - Queries only for gender breakdowns
-   - Returns gender crosstabs
-
-**Result:**  
-- **Without optimization:** 2 API calls (Questionnaire + Crosstabs)
-- **With optimization:** 1 API call (Crosstabs only)
-- **Savings:** 50% reduction, ~2 seconds faster, ~$0.01-0.02 cheaper
-
-**This pattern extends to 3+ turn conversations:**
-```
-Turn 1: "Immigration by party" → Questionnaire + Crosstabs (2 calls)
-Turn 2: "By gender"            → Crosstabs only (1 call) - 50% savings
-Turn 3: "By age"               → Crosstabs only (1 call) - 66% total savings
-```
-
----
+  * **Result:** 50% reduction in calls, faster response, cheaper cost.
 
 ### Example 4: Visualization Generation
-**Query:** "Show me Biden's approval ratings"
 
-**Flow:**
-1. Multi-stage retrieval → Gets approval percentages
-2. **VisualizationAgent** (runs after synthesis):
-   - Analyzes query + retrieved data
-   - Detects: Single-variable statistics → bar chart appropriate
-   - Generates matplotlib figure
-3. Returns answer text + bar chart
+**Query:** *"Show me Biden's approval ratings over time."*
 
-**Result:** Text answer with embedded visualization in Gradio interface
+1.  **Retrieval:** Multi-stage retrieval gets percentages from multiple polls.
+2.  **Intent Analysis:** Detects time-series data → `should_visualize=true`, `viz_type='line_chart'`.
+3.  **Data Extraction:** Parses x-axis (dates) and y-axis (approval %).
+4.  **Chart Generation:** Renders line chart with multiple series (Support vs Oppose).
 
----
+-----
 
-## 6. Evaluation & Technical Challenges
+## 6\. Evaluation & Technical Challenges
 
 ### Technical Challenges Solved
 
-**Challenge 1: When to Use Multi-Stage vs Single-Stage?**
-- Solution: GPT-4o-powered Research Brief decides dynamically
-- Uses query clarity + conversation context
-
-**Challenge 2: Context Window Limits**  
-- Problem: Crosstabs return 50+ chunks per question
-- Solution: CrosstabSummarizer uses GPT-4o to condense → 70-80% reduction
-
-**Challenge 3: Conversation Continuity**
-- Problem: How to reuse previous results without re-querying?
-- Solution: LangGraph checkpointing + RelevanceChecker + priority-based context extraction
+  * **When to Use Multi-Stage?** GPT-4o dynamically decides via structured Research Briefs.
+  * **Context Window Limits:** CrosstabSummarizer condenses large datasets by 70-80% using a two-pass approach (Retrieval → Summarization).
+  * **Conversation Continuity:** LangGraph checkpointing + Priority-based context extraction allows state to persist across turns.
+  * **Visualization State:** Metadata is stored in state, but figures are generated fresh post-execution to avoid serialization issues.
+  * **Topic Drift:** Normalization system maps synonyms to canonical topics for precise metadata filtering.
 
 ### Qualitative Assessment
 
 **What Works Well:**
-- Accurate retrieval with metadata filtering (~95% for questionnaires)
-- No hallucinated statistics (grounded in actual data)
-- 50-66% API call reduction via conversation optimization
-- Automatic visualization when appropriate
+
+  * Accurate retrieval (\~95% precision for questionnaires).
+  * No hallucinated statistics (100% grounded in data).
+  * 50-66% API call reduction via conversation optimization.
+  * Automatic visualization intent analysis (\~90% accurate).
 
 **Limitations:**
-- Depends on data availability (no fallback if poll missing)
-- Ambiguous queries may need clarification
-- 
 
----
+  * Depends entirely on data availability.
+  * Visualization is limited to 6 predefined chart types.
+  * In-memory checkpointing loses state on restart.
 
-## 7. Model & Data Cards
+-----
+
+## 7\. Model & Data Cards
 
 ### Models Used
 
-| Model | Version | License | Intended Use |
-|-------|---------|---------|--------------|
-| GPT-4 Omni | gpt-4o | Commercial API | Query routing, relevance checking, summarization, synthesis |
-| OpenAI Embeddings | text-embedding-3-small | Commercial API | Semantic search |
-| Pinecone | Vector DB | Commercial Service | Vector storage & retrieval |
+| Model | Version | Intended Use | API Calls Per Query |
+| :--- | :--- | :--- | :--- |
+| **GPT-4 Omni** | `gpt-4o` | Routing, Summarization, Synthesis, Viz Analysis | 3-5 (varies) |
+| **OpenAI Embeddings** | `text-embedding-3-small` | Semantic search | 1 per query |
+| **Pinecone** | Vector DB | Vector storage & retrieval | 1-3 per query |
+
+**Cost:** $0.04 - $0.06 per typical query (30-50% savings on optimized follow-ups).
 
 ### Ethical Considerations
 
-**Data Privacy:** Survey responses are confidential; system only provides aggregated statistics  
-**Hallucination Risk:** Mitigated by retrieval-first approach with citations  
-**Access Equity:** Requires API keys; currently internal research tool
+  * **Data Privacy:** System only provides aggregated statistics; no individual-level data is accessible.
+  * **Hallucination Risk:** Mitigated by retrieval-first approach; response synthesis explicitly cites sources.
+  * **Bias:** LLM routing may reflect training bias; topic mappings are manually curated.
 
----
+-----
 
-## 8. Impact & Next Steps
+## 8\. Impact & Next Steps
 
 ### Impact
-**Accessibility:** Non-technical researchers can query survey data in natural language  
-**Efficiency:** Reduces hours of manual searching to seconds  
-**Innovation:** Conversation optimization reduces costs by 50-66%
 
-### What This Reveals
-- Multi-agent architecture handles heterogeneous data better than single LLM
-- RelevanceChecker enables stateful conversations at lower cost
-- RAG prevents hallucination on factual data
+  * **Accessibility:** Non-technical researchers can query complex data via natural language (No SQL/Excel needed).
+  * **Efficiency:** 100x+ speedup (seconds vs hours).
+  * **Scalability:** Architecture is extensible to other datasets (Pew, Gallup).
 
 ### Next Steps
-1. **SQL Agent:** Add for time series and custom analytics
-2. **Accuracy Verification:** Test with survey analysts
-3. **More Surveys:** Expand beyond Unity Poll
 
----
+1.  **Accuracy Verification:** Benchmark against manual retrieval.
+2.  **Dataset Expansion:** Add cross-survey comparisons.
+3.  **Visualization Enhancements:** Switch to Plotly for interactivity.
+4.  **Production Deployment:** Implement Redis/PostgreSQL backend for persistent checkpointing.
+5.  **Advanced Optimizations:** Asynchronous agent execution.
+
+-----
 
 ## Repository & Resources
 
-**GitHub:** [vanderbilt-data-science/survey-analytics](https://github.com/vanderbilt-data-science/survey-analytics)
+**GitHub:** `https://github.com/vanderbilt-data-science/survey-analytics`
 
-**Key Technologies:**
-- LangChain & LangGraph (multi-agent orchestration)
-- Pinecone (vector database)
-- OpenAI (embeddings + GPT-4o)
-- Gradio (web interface)
+### Project Structure
 
----
-
-# Appendix: Technical Details
-
-## Data Preprocessing Tools
-
-### Questionnaire Parser
-```python
-# Uses GPT-4o to extract structured metadata from PDFs
-parser = QuestionnaireParser(survey_name="Vanderbilt_Unity_Poll", year=2025, month="June")
-questions = parser.parse_document("questionnaire.pdf")
-parser.to_json()  # Saves structured JSON
+```text
+survey-agent-v2/
+├── survey_agent.py              # Main orchestrator with LangGraph
+├── relevance_checker.py         # ConversationRelevanceChecker
+├── questionnaire_rag.py         # QuestionnaireRAG agent
+├── toplines_rag.py              # ToplinesRAG agent
+├── crosstab_rag.py              # CrosstabsRAG + CrosstabSummarizer
+├── viz_agent.py                 # VisualizationAgent
+├── config.py                    # Topic normalization
+├── app.py                       # Gradio web interface
+└── prompts/
+    ├── research_brief_prompt.txt
+    ├── crosstab_rag_prompt_system.txt
+    └── synthesis_prompt_system.txt
 ```
 
-### Toplines Generator
-```python
-# Calculates weighted percentages from raw data
-toplines = generate_toplines(raw_data_df, questionnaire_metadata)
-# Output: CSV + DOCX with response frequencies
-```
+-----
 
-### Crosstabs Generator
-```python
-# Generates demographic breakdowns
-generate_crosstabs_for_poll(csv_path, breakdown_cols=["PGENDER", "PPARTY", "PAGE"])
-# Output: CSV files per question with demographic crosstabs
-```
+## Appendix: Technical Details
 
-## RelevanceChecker Output Structure
-```python
-class RelevanceResult(BaseModel):
-    is_related: bool
-    relation_type: Literal["same_topic_different_demo", "same_topic_different_time", 
-                          "trend_analysis", "new_topic"]
-    reusable_data: ReusableData  # Which data can be reused
-    time_period_changed: bool
-    reasoning: str
-```
+### Complete Agent Interaction Flow
 
-## Conversation Optimization Mechanism
-```python
-# Stage execution checks for reusable data
-if relevance_result["relation_type"] == "same_topic_different_demo":
-    # Extract question_info from previous stage_results (LangGraph checkpoint)
-    question_info = extract_from_previous_results()
-    
-    # Skip Questionnaire, go directly to Crosstabs with question_info
-    crosstab_docs = crosstab_rag.retrieve_raw_data(
-        user_query=query,
-        question_info=question_info,  # Reused from previous turn
-        filters=filters
-    )
-```
+1.  **User Query** → `SurveyAnalysisAgent.query()`
+2.  **Relevance Checker:** Classifies query and checks for reusable data (e.g., `same_topic_different_demo`).
+3.  **Research Brief Generator:** Creates a `ResearchBrief` with specific routing actions (e.g., `route_to_sources`).
+4.  **Context Extraction:** Pulls `question_info` from previous stage results (Priority: Recent \> History).
+5.  **Stage Execution:** Agents execute. **CrosstabsRAG** includes a sub-step where `CrosstabSummarizer` condenses 50+ chunks.
+6.  **Response Synthesizer:** Generates final text answer.
+7.  **VisualizationAgent:** Checks `VizIntent` → Extracts Data → Renders Chart.
+8.  **Final Output:** Returns Answer + Figure.
 
-## Vector Store Architecture
-- **Pinecone Index 1:** Questionnaires (metadata-filtered by year/month/topic)
-- **Pinecone Index 2:** Toplines (metadata-filtered by variable/year/month)
-- **Pinecone Index 3:** Crosstabs (namespace-partitioned by poll, metadata-filtered by variable)
+### Key Data Structures
 
-## Research Brief Structure (Pydantic)
+**ResearchBrief (Pydantic)**
+
 ```python
 class ResearchBrief(BaseModel):
     action: Literal["answer", "followup", "route_to_sources", "execute_stages"]
     reasoning: str
-    data_sources: List[DataSource]  # Which RAG agents to call
-    stages: List[ResearchStage]     # Multi-stage plan if needed
+    data_sources: List[DataSource]
+    stages: List[ResearchStage]
 ```
+
+**RelevanceResult (Pydantic)**
+
+```python
+class RelevanceResult(BaseModel):
+    is_related: bool
+    relation_type: Literal["same_topic_different_demo", "same_topic_different_time", "trend_analysis", "new_topic"]
+    reusable_data: ReusableData
+    reasoning: str
+```
+
+**VizIntent (Pydantic)**
+
+```python
+class VizIntent(BaseModel):
+    should_visualize: bool
+    viz_type: Optional[Literal["bar_chart", "grouped_bar", "horizontal_bar", "line_chart", "stacked_bar", "pie_chart"]]
+    chart_title: Optional[str]
+    reasoning: str
+```
+
+**ExtractedData (Pydantic)**
+
+```python
+class ExtractedData(BaseModel):
+    data_type: Literal["toplines", "crosstabs", "trends", "comparison"]
+    labels: List[str]
+    values: List[float]
+    grouped_data: Optional[Dict[str, List[float]]]
+    metadata: Dict[str, Any]
+```
+
+-----
