@@ -107,48 +107,9 @@ Somewhat support,25% (122),21% (154),28% (156),18% (67)
 
 ### Multi-Agent System with LangGraph Orchestration
 
-```text
-User Query
-     ↓
-[Has conversation history?]
-     ↓ Yes                     ↓ No
-ConversationRelevanceChecker  Skip
-     ↓                         ↓
-     └─────────────────────────┘
-              ↓
-     Research Brief Generator (LLM)
-              ↓
-     [Routing Decision]
-              ↓
-     ┌────────┴────────┐
-     ↓                 ↓
-execute_stages    route_to_sources
-(multi-stage)     (single-stage)
-     ↓                 ↓
-     └────────┬────────┘
-              ↓
-     Stage Execution Loop
-     ┌─────────────────┐
-     │ QuestionnaireRAG│
-     │ ToplinesRAG     │
-     │ CrosstabsRAG    │──→ CrosstabSummarizer
-     └─────────────────┘
-              ↓
-     Context Extraction
-              ↓
-     [More stages?] ──Yes──→ Loop back
-              ↓ No
-     Response Synthesizer (LLM)
-              ↓
-     [Visualization enabled?]
-              ↓ Yes
-     VisualizationAgent
-     ├─ Intent Analysis (LLM)
-     ├─ Data Extraction
-     └─ Chart Generation
-              ↓
-     Final Response + Chart
-```
+<img width="1116" height="1301" alt="archi drawio" src="https://github.com/user-attachments/assets/7c1b08ad-4878-40f3-89b3-a46a16e5dbe1" />
+
+
 
 ### Core Components (9 Total)
 
