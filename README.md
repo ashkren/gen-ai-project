@@ -278,8 +278,6 @@ Transformer models have finite context windows (GPT-4o: ~128K tokens). With 800+
 - **When to Use Multi-Stage?** GPT-4o dynamically decides via structured Research Briefs.
 - **Context Window Limits:** CrosstabSummarizer condenses large datasets using a two-pass approach (Retrieval → Summarization).
 - **Conversation Continuity:** LangGraph checkpointing + Priority-based context extraction allows state to persist across turns.
-- **Visualization State:** Metadata is stored in state, but figures are generated fresh post-execution to avoid serialization issues.
-- **Topic Drift:** Normalization system maps synonyms to canonical topics for precise metadata filtering.
 
 ### Qualitative Assessment
 
@@ -399,18 +397,16 @@ Presidential approval, immigration, healthcare, economy, gun control, abortion, 
 ## 8\. Impact & Next Steps
 
 ### Impact
-
-  * **Accessibility:** Non-technical researchers can query complex data via natural language.
-  * **Efficiency:** Now it only takes seconds to access survey data
-  * **Scalability:** Architecture is extendable to other datasets
+- **Accessibility:** Non-technical researchers can query complex survey data via natural language.
+- **Scalability:** Architecture is extendable to other survey datasets beyond the Vanderbilt Unity Poll.
+- **Innovation:** Multi-agent orchestration automates complex analytical workflows through transformer-based planning, eliminating hardcoded routing logic.
 
 ### Next Steps
 
-1.  **Accuracy Verification:** Benchmark against manual retrieval.
-2.  **Dataset Expansion:** Add cross-survey comparisons.
+1.  **Accuracy Verification:** Benchmark outputs against domain expert validation.
+2.  **Dataset Expansion:**  Incorporate additional polling organizations beyond the Unity Poll.
 3.  **Visualization Enhancements:** Switch to Plotly for interactivity.
-4.  **Production Deployment:** Implement Redis/PostgreSQL backend for persistent checkpointing.
-5.  **Advanced Optimizations:** Asynchronous agent execution.
+
 
 -----
 
