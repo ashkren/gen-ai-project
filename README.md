@@ -191,21 +191,32 @@ class SurveyAnalysisState(TypedDict):
 
 ## 4\. How Transformers Enable the System
 
-### Three Transformer Models Working Together
+### 1. **Retrieval-Augmented Generation (RAG)**
+This project implements a multi-pipeline RAG system that grounds transformer outputs in actual survey data, preventing hallucinations:
+- **Semantic retrieval**: Uses transformer embeddings (`text-embedding-3-small`) to find relevant survey questions, toplines, and crosstabs from vector databases
+- **Contextual generation**: Retrieved documents are injected into GPT-4o's context window, allowing the transformer to generate answers based on real data rather than parametric knowledge
+- **Multi-source fusion**: Combines Questionnaire, Toplines, and Crosstabs pipelines to provide comprehensive answers
 
-| Component | Model | Type | Role |
-| :--- | :--- | :--- | :--- |
-| **Embeddings** | `text-embedding-3-small` | Encoder-only | Semantic search in vector stores |
-| **Planning & Analysis** | `gpt-4o` | Decoder-only | Query classification, routing, relevance checking |
-| **Synthesis & Viz** | `gpt-4o` | Decoder-only | Data summarization, answer generation, viz intent |
+This demonstrates how RAG extends transformer capabilities beyond their training data, enabling them to answer questions about domain-specific information (Vanderbilt Unity Poll data from 2024-2025) that wasn't in the original training corpus.
 
-### Key Transformer Concepts Applied
+### 2. **Transformer-Powered Intelligent Routing**
+The system uses GPT-4o (a transformer decoder model) to analyze user queries and generate structured research plans:
+```python
+class ResearchBrief(BaseModel):
+    action: Literal["answer", "followup", "route_to_sources", "execute_stages"]
+    data_sources: List[DataSource]  # Which pipelines to query
+    stages: List[ResearchStage]     # Multi-stage execution plan
 
-1.  **Semantic Embeddings (Encoder):** Enables finding semantically related content (e.g., "gun control" matches "firearms policy").
-2.  **Structured Output Generation (Decoder):** GPT-4o generates Pydantic models directly (ResearchBrief, RelevanceResult, VizIntent) ensuring reliable coordination.
-3.  **In-Context Learning:** System prompts define multi-stage planning and behavior without fine-tuning.
-4.  **Retrieval-Augmented Generation (RAG):** Retrieves relevant data to inject into context, preventing hallucination.
-5.  **Topic Normalization System:** Maps variations to 12 canonical topics (e.g., "tariffs" → "economy") to prevent semantic drift.
+# Transformer decides routing strategy
+brief_generator = self.llm.with_structured_output(ResearchBrief)
+```
+The transformer analyzes the query, available data sources, and conversation history to intelligently route between pipelines—or determine if a follow-up question is needed. This showcases how attention mechanisms enable complex decision-making based on context.
+
+### 3. **Context Window Management**
+Transformer models have finite context windows (GPT-4o: ~128K tokens). With 800+ survey respondents and extensive crosstab data, this project implements several strategies to work within these constraints:
+- **Chunking with overlap**: Split large crosstab documents while preserving context across boundaries
+- **Top-k retrieval**: Only include the most semantically relevant documents (top-10) in the LLM context
+- **Crosstab summarization**: Condense multiple raw chunks into focused summaries that extract only relevant demographic breakdowns
 
 -----
 
