@@ -271,48 +271,128 @@ Transformer models have finite context windows (GPT-4o: ~128K tokens). With 800+
 
 -----
 
-## 6\. Evaluation & Technical Challenges
+## 6\. Assessment and Evaluation
 
 ### Technical Challenges Solved
 
-  * **When to Use Multi-Stage?** GPT-4o dynamically decides via structured Research Briefs.
-  * **Context Window Limits:** CrosstabSummarizer condenses large datasets using a two-pass approach (Retrieval → Summarization).
-  * **Conversation Continuity:** LangGraph checkpointing + Priority-based context extraction allows state to persist across turns.
-  * **Visualization State:** Metadata is stored in state, but figures are generated fresh post-execution to avoid serialization issues.
-  * **Topic Drift:** Normalization system maps synonyms to canonical topics for precise metadata filtering.
+- **When to Use Multi-Stage?** GPT-4o dynamically decides via structured Research Briefs.
+- **Context Window Limits:** CrosstabSummarizer condenses large datasets using a two-pass approach (Retrieval → Summarization).
+- **Conversation Continuity:** LangGraph checkpointing + Priority-based context extraction allows state to persist across turns.
+- **Visualization State:** Metadata is stored in state, but figures are generated fresh post-execution to avoid serialization issues.
+- **Topic Drift:** Normalization system maps synonyms to canonical topics for precise metadata filtering.
 
 ### Qualitative Assessment
 
 **What Works Well:**
-
-  * Accurate retrieval
-  * No hallucinated statistics (100% grounded in data)
-  * 50% API call reduction via conversation optimization.
-  * Automatic visualization intent analysis
+- Accurate retrieval
+- No hallucinated statistics (100% grounded in data)
+- ~50% API call reduction via conversation optimization.
+- Automatic visualization intent analysis
 
 **Limitations:**
 
-  * Depends entirely on data availability.
-  * Visualization is limited to 6 predefined chart types.
-  * In-memory checkpointing loses state on restart.
+- Depends entirely on data availability.
+- Visualization is limited to 6 predefined chart types.
+- In-memory checkpointing loses state on restart.
+
+    
+### Ethical/Bias Considerations
+
+**Privacy Protection:**
+- System only provides aggregated statistics; individual survey responses are never accessible
+- No personally identifiable information (PII) can be retrieved or reconstructed from the system
+
+**Data Grounding:**
+- All responses are explicitly grounded in retrieved data to prevent misinformation
+- System cannot fabricate statistics or extrapolate beyond available data
+
+**Potential Biases:**
+- Survey weighting methodology may not fully capture all demographic groups
+- Question wording in original surveys may introduce framing effects
+- LLM routing decisions may reflect biases present in GPT-4o's training data
+- Topic normalization mappings are manually curated and may reflect researchers' categorization choices
+
+**Limitations on Use:**
+- System should not be used for making individual predictions or classifications
+- Statistical outputs do not establish causation and should not be interpreted as such
+- Results are limited to the specific time periods and populations covered by the Vanderbilt Unity Poll
 
 -----
 
 ## 7\. Model & Data Cards
 
-### Models Used
+### Model Card: GPT-4o
 
-| Model | Version | Intended Use | API Calls Per Query |
-| :--- | :--- | :--- | :--- |
-| **GPT-4 Omni** | `gpt-4o` | Routing, Summarization, Synthesis, Viz Analysis | 3-5 (varies) |
-| **OpenAI Embeddings** | `text-embedding-3-small` | Semantic search | 1 per query |
-| **Pinecone** | Vector DB | Vector storage & retrieval | 1-3 per query |
+**Model Details:**
+- Name: GPT-4 Omni (GPT-4o)
+- Developer: OpenAI
+- Model Type: Transformer decoder architecture
 
-### Ethical Considerations
+**Intended Use:**
+- Query routing and research brief generation
+- Crosstab summarization 
+- Response synthesis from multiple data sources
+- Visualization intent analysis
 
-  * **Data Privacy:** System only provides aggregated statistics; no individual-level data is accessible.
-  * **Hallucination Risk:** Mitigated by retrieval-first approach; response synthesis explicitly cites sources.
-  * **Bias:** LLM routing may reflect training bias; topic mappings are manually curated.
+**Limitations:**
+- Routing decisions depend on prompt engineering quality
+- Cannot determine statistical significance or causal relationships
+- May reflect biases present in training data
+
+**Ethical Considerations:**
+- System only provides aggregated statistics; no individual-level data accessible
+- Responses explicitly grounded in retrieved data to prevent misinformation
+
+---
+
+### Model Card: text-embedding-3-small
+
+**Model Details:**
+- Name: text-embedding-3-small
+- Developer: OpenAI
+- Model Type: Transformer-based embedding model
+- Dimension: 1536
+
+**Intended Use:**
+- Semantic search across questionnaire metadata, toplines, and crosstabs
+- Vector representation of survey questions and user queries
+
+**Limitations:**
+- Semantic similarity does not guarantee topical relevance
+- Performance depends on query phrasing quality
+
+---
+
+### Data Card: Vanderbilt Unity Poll
+
+**Dataset Details:**
+- Time Period: March 2023 - June 2025
+- Number of Polls: 8
+- Sample Size: ~1,000 nationally representative respondents per wave
+- Source: Joshua Clinton, Professor of Political Science and Director of the Vanderbilt Poll, Vanderbilt University
+
+**Data Structure:**
+- Questionnaires: Question text, variable names, response options, topics (PDF/DOCX → JSON)
+- Raw Data: Individual survey responses with demographic variables and question answers (SPSS .sav → CSV)
+
+**Collection & Processing:**
+- Nationally representative surveys, weighted to U.S. Census demographics
+- Questionnaires parsed via GPT-4o into structured JSON
+- Toplines and crosstabs calculated from weighted survey responses
+- Text embeddings generated and stored in Pinecone vector database
+
+**Topics Covered:**
+Presidential approval, immigration, healthcare, economy, gun control, abortion, election integrity, foreign policy
+
+**Privacy:**
+- All data aggregated only; no personally identifiable information (PII) accessible
+- Individual responses cannot be reconstructed
+
+**Limitations:**
+- Coverage limited to surveyed topics and 2024-2025 time period
+- Some demographic subgroups may have small sample sizes
+- Question wording may introduce framing effects
+- System cannot answer questions about unprocessed polls
 
 -----
 
@@ -338,6 +418,17 @@ Transformer models have finite context windows (GPT-4o: ~128K tokens). With 800+
 
 **GitHub:** `https://github.com/vanderbilt-data-science/survey-analytics`
 
+**Frameworks and Libraries:**
+- LangGraph: Framework for building stateful, multi-agent workflows with LLMs https://docs.langchain.com/oss/python/langgraph/overview
+- LangChain: Toolkit for developing LLM applications with RAG capabilities https://docs.langchain.com/oss/python/langchain/rag
+- Pinecone: Vector database for semantic search and embeddings storage https://www.pinecone.io/
+  
+**Key Concepts and Techniques:**
+- Retrieval-Augmented Generation (RAG) Paper: https://arxiv.org/abs/2005.11401
+- GPT-4o: Multimodal language model used for routing, summarization, and synthesis https://openai.com/index/hello-gpt-4o/
+- OpenAI Embeddings Documentation: Text-embedding-3-small model https://platform.openai.com/docs/guides/embeddings
+- Pydantic: Data validation using Python type annotations for structured outputs https://docs.pydantic.dev/
+
 ### Project Structure
 
 ```text
@@ -353,7 +444,9 @@ survey-agent-v2/
 └── prompts/
     ├── research_brief_prompt.txt
     ├── crosstab_rag_prompt_system.txt
-    └── synthesis_prompt_system.txt
+    ├── synthesis_prompt_system.txt
+    └── ....
+
 ```
 
 -----
