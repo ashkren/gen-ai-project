@@ -189,7 +189,7 @@ class SurveyAnalysisState(TypedDict):
 
 -----
 
-## 4\. How Transformers Enable the System
+## 4\. Transformers Concepts
 
 ### 1. **Retrieval-Augmented Generation (RAG)**
 This project implements a multi-pipeline RAG system that grounds transformer outputs in actual survey data, preventing hallucinations:
@@ -314,10 +314,24 @@ Transformer models have finite context windows (GPT-4o: ~128K tokens). With 800+
 - System should not be used for making individual predictions or classifications
 - Statistical outputs do not establish causation and should not be interpreted as such
 - Results are limited to the specific time periods and populations covered by the Vanderbilt Unity Poll
+-----
+
+## 7\. Impact & Next Steps
+
+### Impact
+- **Accessibility:** Non-technical researchers can query complex survey data via natural language.
+- **Scalability:** Architecture is extendable to other survey datasets beyond the Vanderbilt Unity Poll.
+- **Innovation:** Multi-agent orchestration automates complex analytical workflows through transformer-based planning, eliminating hardcoded routing logic.
+
+### Next Steps
+
+1.  **Accuracy Verification:** Benchmark outputs against domain expert validation.
+2.  **Dataset Expansion:**  Incorporate additional polling organizations beyond the Unity Poll.
+3.  **Visualization Enhancements:** Switch to Plotly for interactivity.
 
 -----
 
-## 7\. Model & Data Cards
+## Model & Data Cards
 
 ### Model Card: GPT-4o
 
@@ -391,22 +405,6 @@ Presidential approval, immigration, healthcare, economy, gun control, abortion, 
 - Some demographic subgroups may have small sample sizes
 - Question wording may introduce framing effects
 - System cannot answer questions about unprocessed polls
-
------
-
-## 8\. Impact & Next Steps
-
-### Impact
-- **Accessibility:** Non-technical researchers can query complex survey data via natural language.
-- **Scalability:** Architecture is extendable to other survey datasets beyond the Vanderbilt Unity Poll.
-- **Innovation:** Multi-agent orchestration automates complex analytical workflows through transformer-based planning, eliminating hardcoded routing logic.
-
-### Next Steps
-
-1.  **Accuracy Verification:** Benchmark outputs against domain expert validation.
-2.  **Dataset Expansion:**  Incorporate additional polling organizations beyond the Unity Poll.
-3.  **Visualization Enhancements:** Switch to Plotly for interactivity.
-
 
 -----
 
