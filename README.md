@@ -37,7 +37,7 @@ Survey results are typically stored in lengthy PDF reports, academic articles, a
 
 ### Our Solution
 
-Use **transformer-based structured generation** to automatically create a "research brief" that routes queries to appropriate sources and generates multi-stage plans when needed.
+A multi-agent RAG system that uses **transformer-based structured generation** to automatically create a "research brief" that routes queries to appropriate sources and generates multi-stage plans when needed.
 
 -----
 
