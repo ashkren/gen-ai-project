@@ -181,18 +181,24 @@ This project implements a multi-pipeline RAG system that grounds transformer out
 
 This demonstrates how RAG extends transformer capabilities beyond their training data, enabling them to answer questions about domain-specific information (Vanderbilt Unity Poll data from 2024-2025) that wasn't in the original training corpus.
 
-### 2. **Transformer-Powered Intelligent Routing**
-The system uses GPT-4o (a transformer decoder model) to analyze user queries and generate structured research plans:
-```python
-class ResearchBrief(BaseModel):
-    action: Literal["answer", "followup", "route_to_sources", "execute_stages"]
-    data_sources: List[DataSource]  # Which pipelines to query
-    stages: List[ResearchStage]     # Multi-stage execution plan
+### 2. In-Context Learning for Intelligent Routing
+The system uses GPT-4o to analyze user queries and generate structured 
+research plans. The system prompt (`research_brief_prompt.txt`) contains 
+detailed routing rules and examples that teach the model planning patterns:
 
-# Transformer decides routing strategy
-brief_generator = self.llm.with_structured_output(ResearchBrief)
-```
-The transformer analyzes the query, available data sources, and conversation history to intelligently route between pipelines—or determine if a follow-up question is needed. This showcases how attention mechanisms enable complex decision-making based on context.
+**Example from prompt:**
+- "Trump's approval in June 2025?" → 
+  Stage 1: QUESTIONNAIRE (identify question), 
+  Stage 2: TOPLINES (retrieve data)
+  
+- "How do immigration responses vary by party?" → 
+  Stage 1: QUESTIONNAIRE (find all immigration questions),
+  Stage 2: CROSSTABS (get demographic breakdowns)
+
+The model learns to detect dependencies (e.g., "crosstabs need questionnaire 
+metadata first") and route queries appropriately—without fine-tuning. 
+Outputs are constrained to a structured ResearchBrief format to ensure 
+valid execution plans.
 
 -----
 
