@@ -10,34 +10,16 @@
 
 The **Vanderbilt Unity Poll** is a quarterly survey tracking American public opinion on major policy issues—healthcare, immigration, presidential approval, economic policy, and more. Each wave surveys **\~2,000 nationally representative respondents**.
 
-Survey results are typically stored in lengthy PDF reports, academic articles, and static data tables. Researchers and analysts must manually search through numerous reports to find specific statistics, demographic breakdowns, or track trends over time—a process that can take hours for a single analysis. Our project seeks to make survey data more accessible using generative AI capabilities to provide specific survey results in real-time.
+Survey results are typically stored in lengthy PDF reports, academic articles, and static data tables. Researchers and analysts must manually search through numerous reports to find specific statistics, demographic breakdowns, or track trends over time—a process that can take hours for a single analysis. Our project seeks to make survey data more accessible through a RAG-based chatbot to provide survey results in real-time.
 
-### The Challenge
-
-**Goal:** Create a natural language chatbot that answers questions about survey data.
-
-**Problem:** Survey data exists in **heterogeneous structures**:
-
-1.  **Questionnaire data:** Question text, variable names, metadata.
-2.  **Topline statistics:** Overall response percentages for each question (e.g., "In the 2024 election, 50% of respondents voted for..., 20% voted for...").
-3.  **Crosstabs:** Sociodemographic breakdowns for each answer option of a survey question (e.g., "Out of all respondents who voted for X, 70% are Democrats, 15% are Republicans").
-
-> **Why Simple RAG Fails:**
->
->   * It cannot determine which data source(s) to query from natural language.
->   * It cannot generate multi-step execution plans when queries require multiple sources.
->   * It cannot handle dependencies between retrieval stages.
-
-**Example Complexity:**
-*User:* "What percentage of college-educated voters supported Biden in June 2025?"
-
-  * **Step 1:** Find question (Questionnaire)
-  * **Step 2:** Get percentages (Toplines)
-  * **Step 3:** Break down by education (Crosstabs)
+### The Technical Challenge
+- Survey data exists across three heterogeneous sources: questionnaire metadata, topline statistics, and demographic crosstabs -- each requiring different retrieval strategies
+- Complex queries create dependencies between the data sources: crosstab and topline-related queries require structured question metadata (variable names, year, month) from the questionnaire data source
+  - For example, "What percentage of ... supporters are college educated?" requires first identifying the candidate approval question from the questionnaire data, then using that question's metadata to retrieve education breakdowns from crosstabs
 
 ### Our Solution
 
-A multi-agent RAG system that uses **transformer-based structured generation** to automatically create a "research brief" that routes queries to appropriate sources and generates multi-stage plans when needed.
+A multi-agent RAG-based chatbot that uses **transformer-based structured generation** to automatically create a "research brief" that routes queries to appropriate sources and generates multi-stage plans when needed.
 
 -----
 
@@ -47,7 +29,7 @@ A multi-agent RAG system that uses **transformer-based structured generation** t
 
 **Input Materials:** Poll questionnaires (PDF/DOCX) and Raw survey responses (SPSS .sav converted to CSV).
 
-### Step 1: Parse Questionnaires
+### Step 1: Parse Questionnaires for
 
   * **Tool:** `questionnaire_parser.py`
   * **Input:** Questionnaire PDF/DOCX
