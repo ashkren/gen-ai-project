@@ -287,7 +287,7 @@ Presidential approval, immigration, healthcare, economy, gun control, abortion, 
 
 ## Repository & Resources
 
-**GitHub:** `https://github.com/vanderbilt-data-science/survey-analytics`
+**GitHub:** https://github.com/vanderbilt-data-science/survey-analytics
 
 **Frameworks and Libraries:**
 - LangGraph: Framework for building stateful, multi-agent workflows with LLMs https://docs.langchain.com/oss/python/langgraph/overview
@@ -323,6 +323,57 @@ survey-agent-v2/
 -----
 
 ## Appendix: Technical Details
+
+### Core Components (9 Total)
+
+1.  **ConversationRelevanceChecker (`relevance_checker.py`):**
+
+      * LLM analyzes relationship between current query and history.
+      * Classifies: `same_topic_different_demo`, `same_topic_different_time`, `trend_analysis`, `new_topic`.
+      * Determines reusable data flags → **reduces API calls by 50%**.
+
+2.  **Research Brief Generator (GPT-4o within `survey_agent.py`):**
+
+      * Decides routing strategy based on query + relevance analysis.
+      * Generates multi-stage plans when needed and extracts filters.
+      * Uses structured output (Pydantic `ResearchBrief` model).
+
+3.  **QuestionnaireRAG (`questionnaire_rag.py`):**
+
+      * Retrieves question metadata from Pinecone via Semantic search + metadata filtering.
+      * Outputs: `question_info` (variable names, poll dates, topics).
+
+4.  **ToplinesRAG (`toplines_rag.py`):**
+
+      * Retrieves aggregate response statistics using `question_info` for precise filtering.
+      * Outputs: Response percentages with sample sizes.
+
+5.  **CrosstabsRAG (`crosstab_rag.py`):**
+
+      * Retrieves demographic breakdowns using `question_info` + demographic filters.
+      * Outputs: Multi-dimensional crosstab data.
+
+6.  **CrosstabSummarizer (LLM-based within `crosstab_rag.py`):**
+
+      * **Problem:** Crosstabs return 50+ chunks per question.
+      * **Solution:** GPT-4o condenses chunks → **70-80% reduction**.
+      * Combines multi-part documents and extracts only relevant demographics.
+
+7.  **Context Extractor (within `survey_agent.py`):**
+
+      * Extracts `question_info` metadata from stage results.
+      * Priority: Recent results \> conversation history. Stores in LangGraph checkpoint.
+
+8.  **Response Synthesizer (GPT-4o within `survey_agent.py`):**
+
+      * Combines retrieved data into a coherent narrative with citations.
+      * Token optimization via CrosstabSummarizer integration.
+
+9.  **VisualizationAgent (`viz_agent.py` - Optional):**
+
+      * **Intent Analysis:** LLM determines if chart is appropriate and returns `VizIntent`.
+      * **Data Extraction:** Rule-based parsing from stage results (`_extract_from_toplines`, `_extract_from_crosstabs`).
+      * **Chart Generation:** Matplotlib rendering (Bar, Grouped Bar, Line, Pie) with auto-layout.
 
 ### Key Data Structures
 
