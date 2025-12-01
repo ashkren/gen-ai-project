@@ -4,7 +4,7 @@
 
 -----
 
-## 1\. Problem Statement
+## Problem Statement
 
 ### Background
 
@@ -23,7 +23,7 @@ A multi-agent RAG-based chatbot that uses **transformer-based structured generat
 
 -----
 
-## 2\. Data Preprocessing: Creating Static Datasets for RAG Agents
+## Data Preprocessing: Creating Static Datasets for RAG Agents
 
 ### Challenge: Raw Data → Vector Stores
 
@@ -35,7 +35,6 @@ A multi-agent RAG-based chatbot that uses **transformer-based structured generat
   * **Input:** Questionnaire PDF/DOCX
   * **Process:** GPT-4o extracts structured metadata via prompt engineering.
   * **Output:** Static JSON file with question metadata.
-  * **Vectorstore:** `create_questionnaire_vectorstores.py` generates embeddings and uploads to Pinecone.
 
 <!-- end list -->
 
@@ -57,7 +56,6 @@ A multi-agent RAG-based chatbot that uses **transformer-based structured generat
   * **Input:** Raw survey CSV + Questionnaire JSON
   * **Process:** Calculate weighted percentages for the overall sample.
   * **Output:** Static CSV files with response frequencies.
-  * **Vectorstore:** `create_toplines_vectorstores.py` generates embeddings and uploads to Pinecone.
 
 <!-- end list -->
 
@@ -73,8 +71,7 @@ VAND6A,Somewhat support,23,276,280
   * **Input:** Raw survey CSV + Questionnaire JSON
   * **Process:** Calculate weighted percentages by demographics.
   * **Output:** Static CSV files with demographic breakdowns.
-  * **Vectorstore:** `create_crosstab_vectorstore.py` generates embeddings and uploads to Pinecone.
-
+    
 <!-- end list -->
 
 ```csv
@@ -83,82 +80,28 @@ Strongly support,32% (156),38% (264),54% (301),12% (45)
 Somewhat support,25% (122),21% (154),28% (156),18% (67)
 ```
 
+**All three data sources were converted to embeddings using OpenAI's text-embedding-3-small (encoder) and uploaded to Pinecone vector stores.**
+
 -----
 
-## 3\. Architecture Overview
+## Architecture Overview
 
 ### Multi-Agent System with LangGraph Orchestration
 
 <img width="1116" height="1301" alt="archi drawio" src="https://github.com/user-attachments/assets/7c1b08ad-4878-40f3-89b3-a46a16e5dbe1" />
 
 
+### Complete Agent Interaction Flow
 
-### Core Components (9 Total)
+1.  **User Query** → `SurveyAnalysisAgent.query()`
+2.  **Relevance Checker:** Classifies query and checks for reusable data (e.g., `same_topic_different_demo`).
+3.  **Research Brief Generator:** Creates a `ResearchBrief` with specific routing actions (e.g., `route_to_sources`).
+4.  **Context Extraction:** Pulls `question_info` from previous stage results (Priority: Recent \> History).
+5.  **Stage Execution:** Agents execute. **CrosstabsRAG** includes a sub-step where `CrosstabSummarizer` condenses 50+ chunks.
+6.  **Response Synthesizer:** Generates final text answer.
+7.  **VisualizationAgent:** Checks `VizIntent` → Extracts Data → Renders Chart.
+8.  **Final Output:** Returns Answer + Figure.
 
-1.  **ConversationRelevanceChecker (`relevance_checker.py`):**
-
-      * LLM analyzes relationship between current query and history.
-      * Classifies: `same_topic_different_demo`, `same_topic_different_time`, `trend_analysis`, `new_topic`.
-      * Determines reusable data flags → **reduces API calls by 50%**.
-
-2.  **Research Brief Generator (GPT-4o within `survey_agent.py`):**
-
-      * Decides routing strategy based on query + relevance analysis.
-      * Generates multi-stage plans when needed and extracts filters.
-      * Uses structured output (Pydantic `ResearchBrief` model).
-
-3.  **QuestionnaireRAG (`questionnaire_rag.py`):**
-
-      * Retrieves question metadata from Pinecone via Semantic search + metadata filtering.
-      * Outputs: `question_info` (variable names, poll dates, topics).
-
-4.  **ToplinesRAG (`toplines_rag.py`):**
-
-      * Retrieves aggregate response statistics using `question_info` for precise filtering.
-      * Outputs: Response percentages with sample sizes.
-
-5.  **CrosstabsRAG (`crosstab_rag.py`):**
-
-      * Retrieves demographic breakdowns using `question_info` + demographic filters.
-      * Outputs: Multi-dimensional crosstab data.
-
-6.  **CrosstabSummarizer (LLM-based within `crosstab_rag.py`):**
-
-      * **Problem:** Crosstabs return 50+ chunks per question.
-      * **Solution:** GPT-4o condenses chunks → **70-80% reduction**.
-      * Combines multi-part documents and extracts only relevant demographics.
-
-7.  **Context Extractor (within `survey_agent.py`):**
-
-      * Extracts `question_info` metadata from stage results.
-      * Priority: Recent results \> conversation history. Stores in LangGraph checkpoint.
-
-8.  **Response Synthesizer (GPT-4o within `survey_agent.py`):**
-
-      * Combines retrieved data into a coherent narrative with citations.
-      * Token optimization via CrosstabSummarizer integration.
-
-9.  **VisualizationAgent (`viz_agent.py` - Optional):**
-
-      * **Intent Analysis:** LLM determines if chart is appropriate and returns `VizIntent`.
-      * **Data Extraction:** Rule-based parsing from stage results (`_extract_from_toplines`, `_extract_from_crosstabs`).
-      * **Chart Generation:** Matplotlib rendering (Bar, Grouped Bar, Line, Pie) with auto-layout.
-
-### LangGraph State Management
-
-**State Model:**
-
-```python
-class SurveyAnalysisState(TypedDict):
-    messages: Annotated[List[BaseMessage], add_messages]
-    user_question: str
-    research_brief: Optional[ResearchBrief]
-    current_stage: int
-    stage_results: List[StageResult]  # Preserved across turns!
-    final_answer: Optional[str]
-    enable_viz_for_query: bool
-    visualization_metadata: Optional[Dict]
-```
 
 ### Routing Logic
 
@@ -171,38 +114,7 @@ class SurveyAnalysisState(TypedDict):
 
 -----
 
-## 4\. Transformers Concepts
-
-### 1. **Retrieval-Augmented Generation (RAG)**
-This project implements a multi-pipeline RAG system that grounds transformer outputs in actual survey data, preventing hallucinations:
-- **Semantic retrieval**: Uses transformer embeddings (`text-embedding-3-small`) to find relevant survey questions, toplines, and crosstabs from vector databases
-- **Contextual generation**: Retrieved documents are injected into GPT-4o's context window, allowing the transformer to generate answers based on real data rather than parametric knowledge
-- **Multi-source fusion**: Combines Questionnaire, Toplines, and Crosstabs pipelines to provide comprehensive answers
-
-This demonstrates how RAG extends transformer capabilities beyond their training data, enabling them to answer questions about domain-specific information (Vanderbilt Unity Poll data from 2024-2025) that wasn't in the original training corpus.
-
-### 2. In-Context Learning for Intelligent Routing
-The system uses GPT-4o to analyze user queries and generate structured 
-research plans. The system prompt (`research_brief_prompt.txt`) contains 
-detailed routing rules and examples that teach the model planning patterns:
-
-**Example from prompt:**
-- "Trump's approval in June 2025?" → 
-  Stage 1: QUESTIONNAIRE (identify question), 
-  Stage 2: TOPLINES (retrieve data)
-  
-- "How do immigration responses vary by party?" → 
-  Stage 1: QUESTIONNAIRE (find all immigration questions),
-  Stage 2: CROSSTABS (get demographic breakdowns)
-
-The model learns to detect dependencies (e.g., "crosstabs need questionnaire 
-metadata first") and route queries appropriately—without fine-tuning. 
-Outputs are constrained to a structured ResearchBrief format to ensure 
-valid execution plans.
-
------
-
-## 5\. Implementation Demo
+## Implementation Demo
 
 ### Example 1: Single-Stage Questionnaire Search
 
@@ -253,7 +165,7 @@ valid execution plans.
 
 -----
 
-## 6\. Assessment and Evaluation
+## Assessment and Evaluation
 
 ### Licenses and Intended Use
 | Component | License | Intended Use |
@@ -281,7 +193,7 @@ valid execution plans.
 - Results are limited to the specific time periods and populations covered by the Vanderbilt Unity Poll
 -----
 
-## 7\. Impact & Next Steps
+## Impact & Next Steps
 
 ### Impact
 - **Accessibility:** Non-technical researchers can query complex survey data via natural language.
@@ -411,17 +323,6 @@ survey-agent-v2/
 -----
 
 ## Appendix: Technical Details
-
-### Complete Agent Interaction Flow
-
-1.  **User Query** → `SurveyAnalysisAgent.query()`
-2.  **Relevance Checker:** Classifies query and checks for reusable data (e.g., `same_topic_different_demo`).
-3.  **Research Brief Generator:** Creates a `ResearchBrief` with specific routing actions (e.g., `route_to_sources`).
-4.  **Context Extraction:** Pulls `question_info` from previous stage results (Priority: Recent \> History).
-5.  **Stage Execution:** Agents execute. **CrosstabsRAG** includes a sub-step where `CrosstabSummarizer` condenses 50+ chunks.
-6.  **Response Synthesizer:** Generates final text answer.
-7.  **VisualizationAgent:** Checks `VizIntent` → Extracts Data → Renders Chart.
-8.  **Final Output:** Returns Answer + Figure.
 
 ### Key Data Structures
 
