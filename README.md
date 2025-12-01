@@ -194,12 +194,6 @@ brief_generator = self.llm.with_structured_output(ResearchBrief)
 ```
 The transformer analyzes the query, available data sources, and conversation history to intelligently route between pipelines—or determine if a follow-up question is needed. This showcases how attention mechanisms enable complex decision-making based on context.
 
-### 3. **Context Window Management**
-Transformer models have finite context windows (GPT-4o: ~128K tokens). With 800+ survey respondents and extensive crosstab data, this project implements several strategies to work within these constraints:
-- **Chunking with overlap**: Split large crosstab documents while preserving context across boundaries
-- **Top-k retrieval**: Only include the most semantically relevant documents (top-10) in the LLM context
-- **Crosstab summarization**: Condense multiple raw chunks into focused summaries that extract only relevant demographic breakdowns
-
 -----
 
 ## 5\. Implementation Demo
@@ -255,25 +249,16 @@ Transformer models have finite context windows (GPT-4o: ~128K tokens). With 800+
 
 ## 6\. Assessment and Evaluation
 
-### Technical Challenges Solved
-
-- **When to Use Multi-Stage?** GPT-4o dynamically decides via structured Research Briefs.
-- **Context Window Limits:** CrosstabSummarizer condenses large datasets using a two-pass approach (Retrieval → Summarization).
-- **Conversation Continuity:** LangGraph checkpointing + Priority-based context extraction allows state to persist across turns.
-
-### Qualitative Assessment
-
 **What Works Well:**
-- Accurate retrieval
-- No hallucinated statistics (100% grounded in data)
-- ~50% API call reduction via conversation optimization.
-- Automatic visualization intent analysis
+- High retrieval accuracy: Metadata filtering ensures precise question matching across 125+ survey questions and 9 poll waves
+- Grounded responses: System architecture constrains outputs to retrieved data, minimizing hallucination risk
+- 50% Reduction in API calls: Intelligent conversation optimization and context reuse
 
 **Limitations:**
 
-- Depends entirely on data availability.
-- Visualization is limited to 6 predefined chart types.
-- In-memory checkpointing loses state on restart.
+- Coverage limited to available polls: Cannot answer queries about surveys that have not been pre-processed 
+- LLM routing errors: Research brief generation can misinterpret ambiguous queries, leading to incorrect data source selection or missed dependencies
+- Topic normalization constraints: Limited to 12 predefined topics for metadata filtering; queries outside these topics fall back to less efficient semantic search
 
     
 ### Ethical/Bias Considerations
@@ -282,19 +267,14 @@ Transformer models have finite context windows (GPT-4o: ~128K tokens). With 800+
 - System only provides aggregated statistics; individual survey responses are never accessible
 - No personally identifiable information (PII) can be retrieved or reconstructed from the system
 
-**Data Grounding:**
-- All responses are explicitly grounded in retrieved data to prevent misinformation
-- System cannot fabricate statistics or extrapolate beyond available data
-
 **Potential Biases:**
 - Survey weighting methodology may not fully capture all demographic groups
 - Question wording in original surveys may introduce framing effects
 - LLM routing decisions may reflect biases present in GPT-4o's training data
-- Topic normalization mappings are manually curated and may reflect researchers' categorization choices
 
 **Limitations on Use:**
+- System should only be used for exploratory analysis of aggregated survey data and understanding public opinion trends
 - System should not be used for making individual predictions or classifications
-- Statistical outputs do not establish causation and should not be interpreted as such
 - Results are limited to the specific time periods and populations covered by the Vanderbilt Unity Poll
 -----
 
@@ -309,7 +289,7 @@ Transformer models have finite context windows (GPT-4o: ~128K tokens). With 800+
 
 1.  **Accuracy Verification:** Benchmark outputs against domain expert validation.
 2.  **Dataset Expansion:**  Incorporate additional polling organizations beyond the Unity Poll.
-3.  **Visualization Enhancements:** Switch to Plotly for interactivity.
+3.  **LLM Provider Evaluation**: Test alternative LLM providers (Claude, Gemini, Llama) to compare routing accuracy and query latency against the current GPT-4o implementation.
 
 -----
 
@@ -389,6 +369,17 @@ Presidential approval, immigration, healthcare, economy, gun control, abortion, 
 - System cannot answer questions about unprocessed polls
 
 -----
+
+## Licenses and Intended Use
+| Component | License | Intended Use |
+|-----------|---------|--------------|
+| GPT-4o | Commercial API (OpenAI) | Research brief generation, query routing, response synthesis |
+| text-embedding-3-small | Commercial API (OpenAI) | Semantic search over survey questions and responses |
+| Pinecone | Commercial (Serverless) | Vector database for storing and retrieving questionnaire, topline, and crosstab embeddings |
+| LangChain/LangGraph | MIT (Open Source) | RAG orchestration and conversation state management |
+| Vanderbilt Unity Poll Data | Academic Use (Citation Required) | Source survey data for public opinion analysis |
+
+----
 
 ## Repository & Resources
 
