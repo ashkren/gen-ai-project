@@ -1,4 +1,4 @@
-# Survey Analytics: Multi-Agent RAG System
+# Survey Analytics Multi-Agent RAG System
 
 **Authors:** Ash Ren, Rama Sai Adithya Kalidindi
 
