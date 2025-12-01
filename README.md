@@ -249,18 +249,15 @@ The transformer analyzes the query, available data sources, and conversation his
 
 ## 6\. Assessment and Evaluation
 
-**What Works Well:**
-- High retrieval accuracy: Metadata filtering ensures precise question matching across 125+ survey questions and 9 poll waves
-- Grounded responses: System architecture constrains outputs to retrieved data, minimizing hallucination risk
-- 50% Reduction in API calls: Intelligent conversation optimization and context reuse
+### Licenses and Intended Use
+| Component | License | Intended Use |
+|-----------|---------|--------------|
+| GPT-4o | Commercial API (OpenAI) | Research brief generation, query routing, response synthesis |
+| text-embedding-3-small | Commercial API (OpenAI) | Semantic search over survey questions and responses |
+| Pinecone | Commercial (Serverless) | Vector database for storing and retrieving questionnaire, topline, and crosstab embeddings |
+| LangChain/LangGraph | MIT (Open Source) | RAG orchestration and conversation state management |
+| Vanderbilt Unity Poll Data | Academic Use (Citation Required) | Source survey data for public opinion analysis |
 
-**Limitations:**
-
-- Coverage limited to available polls: Cannot answer queries about surveys that have not been pre-processed 
-- LLM routing errors: Research brief generation can misinterpret ambiguous queries, leading to incorrect data source selection or missed dependencies
-- Topic normalization constraints: Limited to 12 predefined topics for metadata filtering; queries outside these topics fall back to less efficient semantic search
-
-    
 ### Ethical/Bias Considerations
 
 **Privacy Protection:**
@@ -367,17 +364,6 @@ Presidential approval, immigration, healthcare, economy, gun control, abortion, 
 - Some demographic subgroups may have small sample sizes
 - Question wording may introduce framing effects
 - System cannot answer questions about unprocessed polls
-
------
-
-## Licenses and Intended Use
-| Component | License | Intended Use |
-|-----------|---------|--------------|
-| GPT-4o | Commercial API (OpenAI) | Research brief generation, query routing, response synthesis |
-| text-embedding-3-small | Commercial API (OpenAI) | Semantic search over survey questions and responses |
-| Pinecone | Commercial (Serverless) | Vector database for storing and retrieving questionnaire, topline, and crosstab embeddings |
-| LangChain/LangGraph | MIT (Open Source) | RAG orchestration and conversation state management |
-| Vanderbilt Unity Poll Data | Academic Use (Citation Required) | Source survey data for public opinion analysis |
 
 ----
 
