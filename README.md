@@ -126,24 +126,7 @@ Somewhat support,25% (122),21% (154),28% (156),18% (67)
 4.  **Result:** List of questions with variable names and poll dates.
 
 
-### Example 2: Conversation Optimization (Cost Savings)
-
-**Turn 1:** *"How do views on immigration vary by political party?"*
-
-  * **Execution:** QuestionnaireRAG (finds 9 questions) + CrosstabsRAG. **(2 API Calls)**
-
-**Turn 2:** *"Now show me by gender instead."*
-
-1.  **Relevance Check:** `same_topic_different_demo`.
-2.  **Optimization:** Reusable data flag set to `questions=true`.
-3.  **Plan:** `route_to_sources` (Skips QuestionnaireRAG).
-4.  **Execution:** Extracts `question_info` from previous state → Queries CrosstabsRAG only. **(1 API Call)**
-
-<!-- end list -->
-
-  * **Result:** 50% reduction in calls, faster response, cheaper cost.
-
-### Example 3: Visualization Generation
+### Example 2: Visualization Generation
 
 **Query:** *"Show me Biden's approval ratings over time."*
 
