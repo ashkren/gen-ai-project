@@ -125,19 +125,8 @@ Somewhat support,25% (122),21% (154),28% (156),18% (67)
 3.  **Retrieval:** Semantic search + metadata filter (year=2025, topic="immigration").
 4.  **Result:** List of questions with variable names and poll dates.
 
-### Example 2: Multi-Stage Statistics Lookup with Visualization
 
-**Query:** *"What % supported Medicare for All in June 2025?"*
-
-1.  **Relevance:** `new_topic`
-2.  **Plan:** Multi-stage (Stage 1: Find Question → Stage 2: Get Toplines using `question_info`).
-3.  **Retrieval:** ToplinesRAG returns "58% Support".
-4.  **Visualization:**
-      * *Intent:* Single-variable statistics → `bar_chart`.
-      * *Generation:* Matplotlib figure with styled bars.
-5.  **Result:** Accurate statistics + Bar Chart.
-
-### Example 3: Conversation Optimization (Cost Savings)
+### Example 2: Conversation Optimization (Cost Savings)
 
 **Turn 1:** *"How do views on immigration vary by political party?"*
 
@@ -154,7 +143,7 @@ Somewhat support,25% (122),21% (154),28% (156),18% (67)
 
   * **Result:** 50% reduction in calls, faster response, cheaper cost.
 
-### Example 4: Visualization Generation
+### Example 3: Visualization Generation
 
 **Query:** *"Show me Biden's approval ratings over time."*
 
