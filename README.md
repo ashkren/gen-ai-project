@@ -292,11 +292,7 @@ survey-agent-v2/
 
 ```
 
-# Survey Analytics System: Architecture & Setup Guide
 
-## System Architecture Overview
-
-This is a **multi-agent RAG system** built with LangGraph that routes survey research queries across specialized knowledge domains. The architecture follows a state machine pattern with intelligent routing and synthesis.
 
 ### Core Architecture Pattern
 
@@ -306,69 +302,6 @@ User Query → Relevance Check → Router → Specialized RAG Agents → Synthes
                 ↓                           ↓
             [Filter noise]        [Parallel execution possible]
 ```
-
-### Component Hierarchy
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│  survey_agent.py (LangGraph Orchestrator)                   │
-│  - State machine coordination                               │
-│  - Multi-agent routing logic                                │
-└─────────────────────────────────────────────────────────────┘
-                          ↓
-        ┌─────────────────┴─────────────────┐
-        ↓                                   ↓
-┌──────────────────┐              ┌──────────────────┐
-│ Gate Layer       │              │ Processing Layer │
-│ ----------------│              │ ---------------- │
-│ • relevance_     │              │ • questionnaire_ │
-│   checker.py     │              │   rag.py         │
-│   (filters       │              │ • toplines_rag.py│
-│    off-topic)    │              │ • crosstab_rag.py│
-└──────────────────┘              │ • viz_agent.py   │
-                                  └──────────────────┘
-                                           ↓
-                          ┌────────────────────────────┐
-                          │ Knowledge Stores (Pinecone)│
-                          │ - Survey questions         │
-                          │ - Topline results          │
-                          │ - Crosstab tables          │
-                          └────────────────────────────┘
-```
-
-## Key Architectural Decisions
-
-### 1. **State Machine Pattern (LangGraph)**
-Rather than sequential chaining, uses a compiled state graph that allows:
-- Conditional routing based on query intent
-- Parallel agent execution when appropriate
-- Centralized state management
-- Clear execution paths
-
-### 2. **Separation of Concerns**
-Each agent has a single responsibility:
-- **relevance_checker**: Binary gate (relevant/not relevant)
-- **questionnaire_rag**: Question wording/methodology retrieval
-- **toplines_rag**: Overall survey results
-- **crosstab_rag**: Demographic breakdowns + statistical summarization
-- **viz_agent**: Chart generation from data
-
-### 3. **RAG with Semantic Search**
-Uses OpenAI embeddings (`text-embedding-3-small`) + Pinecone for:
-- Vector similarity search across survey artifacts
-- Hybrid search (semantic + metadata filters)
-- Efficient retrieval from large document corpuses
-
-### 4. **Structured Outputs**
-Pydantic models enforce schema compliance:
-```python
-class RelevanceCheck(BaseModel):
-    is_relevant: bool
-    reasoning: str
-```
-This ensures reliable downstream processing.
-
----
 
 ## Running the Project
 
