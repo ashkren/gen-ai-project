@@ -292,6 +292,170 @@ survey-agent-v2/
 
 ```
 
+# Survey Analytics System: Architecture & Setup Guide
+
+## System Architecture Overview
+
+This is a **multi-agent RAG system** built with LangGraph that routes survey research queries across specialized knowledge domains. The architecture follows a state machine pattern with intelligent routing and synthesis.
+
+### Core Architecture Pattern
+
+```python
+# High-level flow (simplified)
+User Query → Relevance Check → Router → Specialized RAG Agents → Synthesizer → Response
+                ↓                           ↓
+            [Filter noise]        [Parallel execution possible]
+```
+
+### Component Hierarchy
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  survey_agent.py (LangGraph Orchestrator)                   │
+│  - State machine coordination                               │
+│  - Multi-agent routing logic                                │
+└─────────────────────────────────────────────────────────────┘
+                          ↓
+        ┌─────────────────┴─────────────────┐
+        ↓                                   ↓
+┌──────────────────┐              ┌──────────────────┐
+│ Gate Layer       │              │ Processing Layer │
+│ ----------------│              │ ---------------- │
+│ • relevance_     │              │ • questionnaire_ │
+│   checker.py     │              │   rag.py         │
+│   (filters       │              │ • toplines_rag.py│
+│    off-topic)    │              │ • crosstab_rag.py│
+└──────────────────┘              │ • viz_agent.py   │
+                                  └──────────────────┘
+                                           ↓
+                          ┌────────────────────────────┐
+                          │ Knowledge Stores (Pinecone)│
+                          │ - Survey questions         │
+                          │ - Topline results          │
+                          │ - Crosstab tables          │
+                          └────────────────────────────┘
+```
+
+## Key Architectural Decisions
+
+### 1. **State Machine Pattern (LangGraph)**
+Rather than sequential chaining, uses a compiled state graph that allows:
+- Conditional routing based on query intent
+- Parallel agent execution when appropriate
+- Centralized state management
+- Clear execution paths
+
+### 2. **Separation of Concerns**
+Each agent has a single responsibility:
+- **relevance_checker**: Binary gate (relevant/not relevant)
+- **questionnaire_rag**: Question wording/methodology retrieval
+- **toplines_rag**: Overall survey results
+- **crosstab_rag**: Demographic breakdowns + statistical summarization
+- **viz_agent**: Chart generation from data
+
+### 3. **RAG with Semantic Search**
+Uses OpenAI embeddings (`text-embedding-3-small`) + Pinecone for:
+- Vector similarity search across survey artifacts
+- Hybrid search (semantic + metadata filters)
+- Efficient retrieval from large document corpuses
+
+### 4. **Structured Outputs**
+Pydantic models enforce schema compliance:
+```python
+class RelevanceCheck(BaseModel):
+    is_relevant: bool
+    reasoning: str
+```
+This ensures reliable downstream processing.
+
+---
+
+## Running the Project
+
+### Prerequisites
+
+```bash
+# Python 3.8+
+python --version
+
+# Required API keys (set as environment variables)
+export OPENAI_API_KEY="your-openai-key"
+export PINECONE_API_KEY="your-pinecone-key"
+```
+
+### Installation
+
+```bash
+# Clone the repository
+git clone https://github.com/vanderbilt-data-science/survey-analytics.git
+cd survey-analytics/survey-agent-v2
+
+# Install dependencies
+pip install -r requirements.txt
+# Or manually:
+pip install langgraph langchain openai pinecone-client pydantic gradio
+```
+
+### Configuration
+
+1. **Set up environment variables** (create `.env` file):
+```bash
+OPENAI_API_KEY=sk-...
+PINECONE_API_KEY=...
+PINECONE_INDEX_NAME=your-index-name
+```
+
+2. **Verify Pinecone indices** exist with survey data:
+   - Survey questions index
+   - Toplines results index
+   - Crosstabs index
+
+### Running the Application
+
+**Option 1: Gradio Web Interface** (Recommended)
+```bash
+python app.py
+```
+- Opens browser automatically at `http://localhost:7860`
+- Interactive chat interface for queries
+
+**Option 2: Direct Python Usage**
+```python
+from survey_agent import SurveyAgent
+
+agent = SurveyAgent()
+response = agent.query("What were the topline results for climate change questions?")
+print(response)
+```
+
+**Option 3: Command Line Testing**
+```bash
+# Test individual components
+python relevance_checker.py  # Test relevance filtering
+python questionnaire_rag.py  # Test question retrieval
+python toplines_rag.py       # Test results retrieval
+```
+
+### Troubleshooting
+
+**Common Issues:**
+
+1. **Missing API Keys**: Ensure environment variables are set
+   ```bash
+   echo $OPENAI_API_KEY  # Should not be empty
+   ```
+
+2. **Pinecone Connection Errors**: Verify index names in `config.py`
+
+3. **Import Errors**: Ensure all dependencies installed
+   ```bash
+   pip install --upgrade -r requirements.txt
+   ```
+
+4. **Port Already in Use** (Gradio):
+   ```bash
+   python app.py --server-port 7861
+   ```
 -----
 
 ## Appendix: Technical Details
