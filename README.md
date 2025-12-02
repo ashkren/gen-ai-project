@@ -118,7 +118,7 @@ Somewhat support,25% (122),21% (154),28% (156),18% (67)
 
 ### Example 1: Single-Stage Questionnaire Search
 
-**Query:** *"What questions were asked about immigration in 2025?"*
+**Query:** *"What do Americans think about immigration in June 2025?"*
 
 1.  **Relevance:** `new_topic`
 2.  **Plan:** Single-stage questionnaire query.
